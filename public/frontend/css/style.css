@@ -1,0 +1,42 @@
+.wp-admin .updated.woocommerce-message,
+.wp-admin .updated.below-h2.rs-update-notice-wrap,
+.wp-admin #tp_twitter_global_notification,
+.wp-admin .updated.vc_license-activation-notice {
+    display: none !important;
+}
+
+.navbar-nav{
+	font-size: 20px;
+	margin-left: 80px;
+}
+
+.dropdown-menu a:hover {
+  	background-color: #0a0a1f;
+}
+
+.card-body{
+  font-size: 18px;
+}
+.form-control{
+  font-size: 16px;
+}
+
+.required{
+  color: red;
+}
+
+@media only screen and (max-width: 600px) {
+  	.navbar-nav{
+    	margin-left: 0px;
+  	}
+  	.imgeres{
+		  height: 400px;
+	  }
+  .responsive {
+    width: auto;
+    height: auto;
+  }
+}
+
+
+

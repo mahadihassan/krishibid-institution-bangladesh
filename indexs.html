@@ -1,0 +1,229 @@
+public function update(Request $request, $id)
+    {
+        $status = ServiceBooking::where('status', 1)->first();
+        if($status) 
+        { 
+            $rules = [
+                //'service_config_id' => 'required',
+                //'service_type_id' => 'required',
+                //'services_id' => 'required',
+                //'services_price' => 'required',
+                'fdate' => 'required',
+                'tdate' => 'required',
+                'guest' => 'required'
+            ];
+            $customMessages = [
+                //'service_type_id.required' => 'Service Type Field is required',
+                //'services_id.required' => 'Service Field is required',
+                //'services_price.required' => 'Service Cost Field is required',
+                'guest.required' => 'Number of Guest field is required',
+                //'service_config_id.required' => 'Time slot field is required',
+                'fdate.required' => 'Date field is required',
+                'tdate.required' => 'Date To field is required',
+            ];
+            $this->validate($request,$rules, $customMessages);
+        }
+        else{
+            $rules = [
+                'service_config_id' => 'required',
+                'service_type_id' => 'required',
+                'services_id' => 'required',
+                'services_price' => 'required',
+                'fdate' => 'required',
+                'tdate' => 'required',
+                'guest' => 'required'
+            ];
+            $customMessages = [
+                'service_type_id.required' => 'Service Type Field is required',
+                'services_id.required' => 'Service Field is required',
+                'services_price.required' => 'Service Cost Field is required',
+                'guest.required' => 'Number of Guest field is required',
+                'service_config_id.required' => 'Time slot field is required',
+                'fdate.required' => 'Date field is required',
+                'tdate.required' => 'Date To field is required',
+            ];
+            $this->validate($request,$rules, $customMessages);
+        }
+        $date = ServiceBooking::where('from_date', '<=',  $request->tdate)->where('to_date', '>=', $request->fdate)->where('services_id', $request->services_id)->first();
+
+       
+
+        $room1 = Service::where('id', $request->services_id)->pluck('room')->first();
+        $room2 = ServiceBooking::where('services_id', $request->services_id)->groupBy('services_id')->sum('room');
+        $room3 = ($room1 - ($room2+$request->room));
+        if($date)
+        {
+            
+            if(empty($room1))
+            {
+                session()->flash('messages', 'There is No Available Slot in that Date . Please Check Our Others Services');
+                return back();
+            }
+            elseif($room3 >= 0){
+                //$user = Auth::user();
+                //\Mail::to($user->email)->send(new SendMail());
+                //\Mail::to($request->admin_email)->send(new AdminMail());
+                $service_booking =ServiceBooking::find($id);
+                $service_booking->services_id = $request->input('services_id');
+                $service_booking->service_types_id = $request->input('service_type_id');
+                $service_booking->service_configures_id = $request->input('service_config_id');
+                $service_booking->events_id = $request->input('event_type');
+                $service_booking->room = $request->input('room');
+                if(!empty($request->kib_number))
+                {
+                    switch ($service_booking->services_id) {
+                        case '1':
+                            $service_booking->service_cost = 1500;
+                            $service_booking->discount = 2000; 
+                            $service_booking->service_tax = ((1500 * 15) / 100); 
+                            break;
+                        case '2':
+                            $service_booking->service_cost = 500;
+                            $service_booking->discount = 1500;
+                            $service_booking->service_tax = ((500 * 15) / 100);  
+                            break;
+                        case '3':
+                            $service_booking->service_cost = 500;
+                            $service_booking->discount = 1500;
+                            $service_booking->service_tax = ((500 * 15) / 100);   
+                            break;
+                        case '4':
+                            $service_booking->service_cost = 500;
+                            $service_booking->discount = 1500;
+                            $service_booking->service_tax = ((500 * 15) / 100);   
+                            break;
+                        case '5':
+                            $service_booking->service_cost = 20000;
+                            $service_booking->discount = 55000; 
+                            $service_booking->service_tax = ((20000 * 15) / 100);  
+                            break;
+                        case '6':
+                            $service_booking->service_cost = 40000;
+                            $service_booking->discount = 75000; 
+                            $service_booking->service_tax = ((40000 * 15) / 100);  
+                            break;
+                        default:
+                            $service_booking->service_cost = $request->input('services_price');
+                            $service_booking->service_tax = (($request->services_price * 15) / 100);
+                            break;
+                    }
+                }
+                else
+                {
+                    $service_booking->service_cost = $request->input('services_price');
+                    $service_booking->service_tax = (($request->services_price * 15) / 100);
+                }
+                if(($request->service_type_id == 2) || ($request->service_type_id == 4) || ($request->service_type_id ==5) )
+                {
+                    $service_booking->car_parking = 3000;
+                    $service_booking->car_tax = ((3000 * 15) / 100);
+                }
+                else{
+                    $service_booking->car_parking =0;
+                    $service_booking->car_tax =0;
+                }
+                $service_booking->total_cost = $service_booking->service_cost + $service_booking->car_parking + $service_booking->service_tax + $service_booking->car_tax;
+                $service_booking->guest_number = $request->input('guest');
+                $service_booking->from_date = $request->input('fdate');
+                $service_booking->to_date = $request->input('tdate');
+                $service_booking->notes = $request->input('note');
+                $service_booking->status = $request->input('status');
+                $service_booking->save();
+                $payment =Payment::find($id);
+                $payment->users_id = $service_booking->users_id;
+                $payment->due = $service_booking->total_cost;
+                $payment->save();
+                session()->flash('message', 'Booking Updated Successfully.');
+                session()->flash('type', 'success');
+                return redirect('admin/Booking');
+            }
+            else{
+                session()->flash('messages', 'There is No Available Slot in that Date . Please Check Our Others Services');
+                return back();
+            }
+        }
+        //Main If Else Part.
+        else
+        {
+            //$user = Auth::user();
+            //\Mail::to($user->email)->send(new SendMail());
+            //\Mail::to($request->admin_email)->send(new AdminMail());
+            $service_booking =ServiceBooking::find($id);
+            $service_booking->service_types_id = $request->input('service_type_id');
+            $service_booking->services_id = $request->input('services_id');
+            $service_booking->service_configures_id = $request->input('service_config_id');
+            $service_booking->events_id = $request->input('event_type');
+            $service_booking->room = $request->input('room');
+            $service_booking->kib_number = $request->input('kib_number');
+            if(!empty($request->kib_number))
+            {
+                switch ($service_booking->services_id) 
+                {
+                    case '1':
+                        $service_booking->service_cost = 1500;
+                        $service_booking->discount = 2000; 
+                        $service_booking->service_tax = ((1500 * 15) / 100); 
+                        break;
+                    case '2':
+                        $service_booking->service_cost = 500;
+                        $service_booking->discount = 1500;
+                        $service_booking->service_tax = ((500 * 15) / 100);  
+                        break;
+                    case '3':
+                        $service_booking->service_cost = 500;
+                        $service_booking->discount = 1500;
+                        $service_booking->service_tax = ((500 * 15) / 100);   
+                        break;
+                    case '4':
+                        $service_booking->service_cost = 500;
+                        $service_booking->discount = 1500;
+                        $service_booking->service_tax = ((500 * 15) / 100);   
+                        break;
+                    case '5':
+                        $service_booking->service_cost = 20000;
+                        $service_booking->discount = 55000; 
+                        $service_booking->service_tax = ((20000 * 15) / 100);  
+                        break;
+                    case '6':
+                        $service_booking->service_cost = 40000;
+                        $service_booking->discount = 75000; 
+                        $service_booking->service_tax = ((40000 * 15) / 100);  
+                        break;
+                    default:
+                        $service_booking->service_cost = $request->input('services_price');
+                        $service_booking->service_tax = (($request->services_price * 15) / 100);
+                        $service_booking->discount = 0;
+                        break;
+                }
+            }
+            else
+            {
+                $service_booking->service_cost = $request->input('services_price');
+                $service_booking->service_tax = (($request->services_price * 15) / 100);
+            }
+            if(($request->service_type_id == 2) || ($request->service_type_id == 4) || ($request->service_type_id ==5) )
+            {
+                $service_booking->car_parking = 3000;
+                $service_booking->car_tax = ((3000 * 15) / 100);
+            }
+            else{
+                $service_booking->car_parking =0;
+                $service_booking->car_tax =0;
+            }
+            $service_booking->total_cost = $service_booking->service_cost + $service_booking->car_parking + $service_booking->service_tax + $service_booking->car_tax;
+            $service_booking->guest_number = $request->input('guest');
+            $service_booking->from_date = $request->input('fdate');
+            $service_booking->to_date = $request->input('tdate');
+            $service_booking->notes = $request->input('note');
+            $service_booking->status = $request->input('status');
+            $service_booking->save();
+            $payment =Payment::find($id);
+            $payment->users_id = $service_booking->users_id;
+            $payment->due = $service_booking->total_cost;
+            $payment->save(); 
+            session()->flash('message', 'Booking Updated Successfully.');
+            session()->flash('type', 'success');
+            return redirect('admin/Booking');
+        }
+    }
+
